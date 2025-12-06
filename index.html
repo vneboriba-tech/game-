@@ -27,19 +27,20 @@
       text-align: center;
     }
 
-    /* Логотип в мягкой рамке */
+    /* Лёгкая стильная рамка вокруг лого */
     #logo-frame {
-      padding: 8px 18px;
-      border-radius: 20px;
-      background: linear-gradient(135deg, rgba(188,166,118,0.95), rgba(241,227,180,0.95));
-      box-shadow: 0 8px 24px rgba(0, 0, 0, 0.5);
+      padding: 6px 16px;
+      border-radius: 18px;
+      background: rgba(5, 9, 24, 0.88);                /* тёмная полупрозрачная подложка */
+      border: 1.5px solid #f1e3b4;                      /* тонкая золотая линия */
+      box-shadow: 0 8px 24px rgba(0, 0, 0, 0.6);
       margin-bottom: 10px;
       max-width: 90vw;
     }
 
     #logo {
       display: block;
-      max-width: 220px;
+      max-width: 210px;
       height: auto;
       image-rendering: -webkit-optimize-contrast;
     }
@@ -73,7 +74,7 @@
       display: block;
       background: #0b1630;
       border-radius: 12px;
-      touch-action: none; /* чтобы не скроллилось при свайпе по игре */
+      touch-action: none;
       max-width: 100%;
       height: auto;
     }
@@ -89,6 +90,16 @@
       color: #f5f5f5;
       font-size: 15px;
       text-shadow: 0 1px 3px rgba(0,0,0,0.6);
+    }
+
+    /* Плашки под счёт и жизни */
+    #score,
+    #lives {
+      background: rgba(5, 9, 24, 0.8);
+      padding: 4px 12px;
+      border-radius: 999px;
+      border: 1px solid rgba(241, 227, 180, 0.9);
+      pointer-events: none;
     }
 
     #controls {
@@ -140,11 +151,11 @@
 
       #logo-frame {
         margin-bottom: 8px;
-        padding: 6px 14px;
+        padding: 5px 12px;
       }
 
       #logo {
-        max-width: 200px;
+        max-width: 190px;
       }
 
       h1 {
@@ -213,7 +224,7 @@
     let W = canvas.width;
     let H = canvas.height;
 
-    // Масштаб игры под экран (чуть шире на телефоне)
+    // Масштаб игры под экран
     function resizeForMobile() {
       const maxWidth = Math.min(window.innerWidth - 20, 640);
       const ratio = maxWidth / 640;
@@ -262,10 +273,9 @@
       right: false
     };
 
-    // функция сложности: чем больше очков, тем быстрее падают объекты
+    // чем больше очков, тем сложнее
     function getDifficulty() {
-      // растёт от 1 до 3 при увеличении счёта
-      return 1 + Math.min(score / 20, 2);
+      return 1 + Math.min(score / 20, 2); // 1–3
     }
 
     function resetGame() {
@@ -290,10 +300,8 @@
     function spawnItem(timestamp) {
       const difficulty = getDifficulty();
 
-      // Решаем, будет ли это особый кружок-журфак
       let isSpecial = false;
-      if (journReady && difficulty > 1.4) { // после разгона сложности
-        // вероятностное появление особого предмета
+      if (journReady && difficulty > 1.4) {
         if (Math.random() < 0.25) {
           isSpecial = true;
         }
@@ -302,7 +310,6 @@
       const radius = isSpecial ? 30 : 26;
       const x = radius + Math.random() * (W - radius * 2);
 
-      // базовая скорость + усиление от сложности
       const baseSpeed = 1.6 + Math.random() * 1.3;
       const speed = baseSpeed * difficulty;
 
@@ -355,7 +362,6 @@
           it.y + it.r > player.y && it.y - it.r < player.y + player.h;
 
         if (withinX && withinY) {
-          // бонус за особый кружок — больше очков
           if (it.type === "journ") {
             score += 3;
           } else {
@@ -427,9 +433,9 @@
       for (const it of items) {
         ctx.save();
 
-        // общий кружок-фон
-        ctx.fillStyle = "#bca676";
-        ctx.strokeStyle = "#f6f0d5";
+        // белый кружок с золотой обводкой
+        ctx.fillStyle = "#fdfdfd";
+        ctx.strokeStyle = "#bca676";
         ctx.lineWidth = 2;
         ctx.beginPath();
         ctx.arc(it.x, it.y, it.r, 0, Math.PI * 2);
@@ -439,7 +445,7 @@
 
         if (it.type === "journ" && journReady) {
           // особый кружок с логотипом журфака
-          const imgSize = it.r * 1.5; // чуть меньше кружка
+          const imgSize = it.r * 1.5;
           ctx.save();
           ctx.beginPath();
           ctx.arc(it.x, it.y, it.r - 2, 0, Math.PI * 2);
