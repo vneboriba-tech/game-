@@ -3,29 +3,43 @@
 <head>
   <meta charset="UTF-8" />
   <title>МАССМЕДИА: Игра конференции</title>
+
+  <!-- Шрифт, похожий на DIN Condensed Bold -->
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Oswald:wght@400;500;600&display=swap" rel="stylesheet">
+
   <style>
     body {
       margin: 0;
       background: radial-gradient(circle at top, #253663 0, #050918 60%);
-      font-family: system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+      font-family: "Oswald", system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
       color: #f5f5f5;
       display: flex;
       flex-direction: column;
       align-items: center;
       justify-content: center;
       height: 100vh;
+      text-align: center;
+    }
+
+    #logo {
+      max-width: 180px;
+      height: auto;
+      margin-bottom: 4px;
+      image-rendering: -webkit-optimize-contrast;
     }
 
     h1 {
-      margin: 8px 0 4px;
+      margin: 4px 0 2px;
       font-size: 22px;
-      letter-spacing: 0.12em;
+      letter-spacing: 0.15em;
       text-transform: uppercase;
     }
 
     #subtitle {
       font-size: 13px;
-      opacity: 0.8;
+      opacity: 0.85;
       margin-bottom: 10px;
     }
 
@@ -34,6 +48,7 @@
       border-radius: 16px;
       padding: 10px;
       background: linear-gradient(135deg, #bca676, #f1e3b4);
+      box-shadow: 0 10px 30px rgba(0, 0, 0, 0.5);
     }
 
     canvas {
@@ -56,9 +71,9 @@
 
     #controls {
       margin-top: 8px;
-      font-size: 12px;
+      font-size: 11px;
       opacity: 0.8;
-      text-align: center;
+      line-height: 1.3;
     }
 
     #restart-btn {
@@ -76,14 +91,27 @@
       cursor: pointer;
       box-shadow: 0 6px 18px rgba(0, 0, 0, 0.4);
       display: none;
+      font-family: "Oswald", system-ui, sans-serif;
+      text-transform: uppercase;
+      letter-spacing: 0.06em;
     }
 
     #restart-btn:hover {
       filter: brightness(1.05);
     }
+
+    #footer {
+      margin-top: 8px;
+      font-size: 12px;
+      line-height: 1.3;
+      opacity: 0.9;
+    }
   </style>
 </head>
 <body>
+  <!-- ЛОГО ИЗ ФАЙЛА logo.png В КОРНЕ -->
+  <img id="logo" src="logo.png" alt="МАССМЕДИА логотип">
+
   <h1>МАССМЕДИА</h1>
   <div id="subtitle">Конференция российских соотечественников — мини-игра</div>
 
@@ -93,12 +121,18 @@
       <div id="score">Очки: 0</div>
       <div id="lives">Жизни: ❤️❤️❤️</div>
     </div>
-    <button id="restart-btn">Сыграть ещё</button>
+    <!-- меняем текст кнопки -->
+    <button id="restart-btn">Играть ещё</button>
   </div>
 
   <div id="controls">
     Управление: стрелки ← → или клавиши A / D<br />
-    Лови кружки с элементами программы конференции, не дай им упасть 3 раза!
+    Лови элементы программы конференции, не дай им упасть 3 раза!
+  </div>
+
+  <div id="footer">
+    Ксения Михайловна Конкина<br>
+    журфак МГУ лучший 🤍
   </div>
 
   <script>
@@ -135,7 +169,7 @@
     let lives = 3;
     let score = 0;
     let lastSpawn = 0;
-    let spawnInterval = 1200; // мс (можно уменьшать по ходу игры)
+    let spawnInterval = 1200; // мс
     let gameOver = false;
 
     const keys = {
@@ -164,7 +198,7 @@
 
     function spawnItem(timestamp) {
       const cfg = itemsConfig[Math.floor(Math.random() * itemsConfig.length)];
-      const radius = 22;
+      const radius = 26; // чуть больше, чтобы текст точно помещался
       const x = radius + Math.random() * (W - radius * 2);
       const speed = 1.8 + Math.random() * 1.7;
 
@@ -199,7 +233,7 @@
         const it = items[i];
         it.y += it.vy;
 
-        // столкновение с игроком (простое пересечение прямоугольников)
+        // столкновение с игроком
         const withinX =
           it.x + it.r > player.x && it.x - it.r < player.x + player.w;
         const withinY =
@@ -207,7 +241,6 @@
 
         if (withinX && withinY) {
           score += 1;
-          // усложняем постепенно
           if (spawnInterval > 500) {
             spawnInterval -= 15;
           }
@@ -229,7 +262,6 @@
     }
 
     function drawBackground() {
-      // лёгкий «свет» в центре
       const gradient = ctx.createRadialGradient(
         W / 2, H / 3, 10,
         W / 2, H / 3, H
@@ -245,6 +277,8 @@
       ctx.fillStyle = "#f1e3b4";
       ctx.shadowColor = "rgba(0,0,0,0.5)";
       ctx.shadowBlur = 8;
+
+      // платформа
       ctx.beginPath();
       const r = 8;
       const x = player.x, y = player.y, w = player.w, h = player.h;
@@ -260,7 +294,7 @@
       ctx.closePath();
       ctx.fill();
 
-      // "человечек" — маленький круг сверху
+      // "голова" человечка
       ctx.beginPath();
       ctx.arc(x + w / 2, y - 12, 10, 0, Math.PI * 2);
       ctx.fill();
@@ -270,11 +304,11 @@
     function drawItems() {
       ctx.textAlign = "center";
       ctx.textBaseline = "middle";
-      ctx.font = "16px system-ui";
 
       for (const it of items) {
-        // кружок
         ctx.save();
+
+        // кружок
         ctx.fillStyle = "#bca676";
         ctx.strokeStyle = "#f6f0d5";
         ctx.lineWidth = 2;
@@ -286,12 +320,13 @@
 
         // эмодзи
         ctx.fillStyle = "#0b1630";
-        ctx.font = "20px system-ui";
-        ctx.fillText(it.emoji, it.x, it.y - 4);
+        ctx.font = "20px 'Oswald', system-ui, sans-serif";
+        ctx.fillText(it.emoji, it.x, it.y - 5);
 
-        // подпись мелко
-        ctx.font = "10px system-ui";
+        // подпись — маленьким шрифтом, чтобы точно помещалась
+        ctx.font = "11px 'Oswald', system-ui, sans-serif";
         ctx.fillText(it.label, it.x, it.y + 13);
+
         ctx.restore();
       }
     }
@@ -305,10 +340,10 @@
       ctx.textAlign = "center";
       ctx.textBaseline = "middle";
 
-      ctx.font = "28px system-ui";
+      ctx.font = "28px 'Oswald', system-ui, sans-serif";
       ctx.fillText("Игра окончена", W / 2, H / 2 - 20);
 
-      ctx.font = "16px system-ui";
+      ctx.font = "16px 'Oswald', system-ui, sans-serif";
       ctx.fillText("Ваш результат: " + score + " очков", W / 2, H / 2 + 10);
       ctx.fillText("Элементы программы ещё будут ждать вас!", W / 2, H / 2 + 36);
 
@@ -325,14 +360,12 @@
         return;
       }
 
-      // логика
       if (timestamp - lastSpawn > spawnInterval) {
         spawnItem(timestamp);
       }
       updatePlayer();
       updateItems();
 
-      // отрисовка
       drawBackground();
       drawItems();
       drawPlayer();
