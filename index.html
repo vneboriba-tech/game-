@@ -10,28 +10,42 @@
   <link href="https://fonts.googleapis.com/css2?family=Oswald:wght@400;500;600&display=swap" rel="stylesheet">
 
   <style>
+    * {
+      box-sizing: border-box;
+    }
+
     body {
       margin: 0;
       font-family: "Oswald", system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
       color: #f5f5f5;
+      background: radial-gradient(circle at top, #253663 0, #050918 60%);
       display: flex;
       flex-direction: column;
       align-items: center;
-      justify-content: center;
+      padding: 16px 10px 24px;
       min-height: 100vh;
       text-align: center;
+    }
 
-      /* Логотип + фон */
-      background-image:
-        url("logo.png"),
-        radial-gradient(circle at top, #253663 0, #050918 60%);
-      background-repeat: no-repeat, no-repeat;
-      background-position: center 40px, center;
-      background-size: 260px auto, cover;
+    /* Блок с логотипом в мягкой рамке */
+    #logo-frame {
+      padding: 8px 18px;
+      border-radius: 20px;
+      background: linear-gradient(135deg, rgba(188,166,118,0.95), rgba(241,227,180,0.95));
+      box-shadow: 0 8px 24px rgba(0, 0, 0, 0.5);
+      margin-bottom: 10px;
+      max-width: 90vw;
+    }
+
+    #logo {
+      display: block;
+      max-width: 220px;
+      height: auto;
+      image-rendering: -webkit-optimize-contrast;
     }
 
     h1 {
-      margin: 90px 0 2px; /* отступ вниз, чтобы освободить место логотипу */
+      margin: 6px 0 2px;
       font-size: 22px;
       letter-spacing: 0.15em;
       text-transform: uppercase;
@@ -41,8 +55,9 @@
     #subtitle {
       font-size: 13px;
       opacity: 0.9;
-      margin-bottom: 10px;
+      margin-bottom: 12px;
       text-shadow: 0 1px 3px rgba(0,0,0,0.6);
+      max-width: 90vw;
     }
 
     #game-container {
@@ -58,7 +73,7 @@
       display: block;
       background: #0b1630;
       border-radius: 12px;
-      touch-action: none; /* чтобы не скроллил страницу при свайпе по игре */
+      touch-action: none; /* чтобы не скроллилось при свайпе по игре */
       max-width: 100%;
       height: auto;
     }
@@ -82,6 +97,7 @@
       opacity: 0.85;
       line-height: 1.3;
       text-shadow: 0 1px 3px rgba(0,0,0,0.6);
+      max-width: 90vw;
     }
 
     #restart-btn {
@@ -109,25 +125,34 @@
     }
 
     #footer {
-      margin-top: 8px;
+      margin-top: 10px;
       font-size: 12px;
       line-height: 1.3;
       opacity: 0.95;
       text-shadow: 0 1px 3px rgba(0,0,0,0.7);
+      max-width: 90vw;
     }
 
     @media (max-width: 700px) {
       h1 {
-        margin-top: 80px;
         font-size: 18px;
       }
       #subtitle {
         font-size: 12px;
       }
+      #ui-overlay {
+        font-size: 12px;
+        padding: 6px 10px;
+      }
     }
   </style>
 </head>
 <body>
+  <!-- ЛОГО В МЯГКОЙ РАМКЕ -->
+  <div id="logo-frame">
+    <img id="logo" src="logo.png" alt="МАССМЕДИА логотип">
+  </div>
+
   <h1>МАССМЕДИА</h1>
   <div id="subtitle">Конференция российских соотечественников — мини-игра</div>
 
@@ -161,7 +186,7 @@
     let W = canvas.width;
     let H = canvas.height;
 
-    // Если экран узкий — лёгкий ресайз под мобильный
+    // Под мобильный: уменьшаем визуальную ширину, чтобы всё влезало
     function resizeForMobile() {
       const maxWidth = Math.min(window.innerWidth - 40, 640);
       const ratio = maxWidth / 640;
@@ -362,7 +387,7 @@
 
       ctx.font = "16px 'Oswald', system-ui, sans-serif";
       ctx.fillText("Ваш результат: " + score + " очков", W / 2, H / 2 + 10);
-      ctx.fillText("Насыщенная программа ждет вас!", W / 2, H / 2 + 36);
+      ctx.fillText("Элементы программы ещё будут ждать вас!", W / 2, H / 2 + 36);
 
       ctx.restore();
       restartBtn.style.display = "block";
