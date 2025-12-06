@@ -1,0 +1,371 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+  <meta charset="UTF-8" />
+  <title>МАССМЕДИА: Игра конференции</title>
+  <style>
+    body {
+      margin: 0;
+      background: radial-gradient(circle at top, #253663 0, #050918 60%);
+      font-family: system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+      color: #f5f5f5;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      height: 100vh;
+    }
+
+    h1 {
+      margin: 8px 0 4px;
+      font-size: 22px;
+      letter-spacing: 0.12em;
+      text-transform: uppercase;
+    }
+
+    #subtitle {
+      font-size: 13px;
+      opacity: 0.8;
+      margin-bottom: 10px;
+    }
+
+    #game-container {
+      position: relative;
+      border-radius: 16px;
+      padding: 10px;
+      background: linear-gradient(135deg, #bca676, #f1e3b4);
+    }
+
+    canvas {
+      display: block;
+      background: #0b1630;
+      border-radius: 12px;
+    }
+
+    #ui-overlay {
+      position: absolute;
+      inset: 10px;
+      pointer-events: none;
+      display: flex;
+      justify-content: space-between;
+      align-items: flex-start;
+      padding: 8px 14px;
+      color: #f5f5f5;
+      font-size: 14px;
+    }
+
+    #controls {
+      margin-top: 8px;
+      font-size: 12px;
+      opacity: 0.8;
+      text-align: center;
+    }
+
+    #restart-btn {
+      position: absolute;
+      left: 50%;
+      top: 50%;
+      transform: translate(-50%, -50%);
+      padding: 10px 18px;
+      border-radius: 999px;
+      border: none;
+      background: #f1e3b4;
+      color: #0b1630;
+      font-weight: 600;
+      font-size: 14px;
+      cursor: pointer;
+      box-shadow: 0 6px 18px rgba(0, 0, 0, 0.4);
+      display: none;
+    }
+
+    #restart-btn:hover {
+      filter: brightness(1.05);
+    }
+  </style>
+</head>
+<body>
+  <h1>МАССМЕДИА</h1>
+  <div id="subtitle">Конференция российских соотечественников — мини-игра</div>
+
+  <div id="game-container">
+    <canvas id="game" width="640" height="420"></canvas>
+    <div id="ui-overlay">
+      <div id="score">Очки: 0</div>
+      <div id="lives">Жизни: ❤️❤️❤️</div>
+    </div>
+    <button id="restart-btn">Сыграть ещё</button>
+  </div>
+
+  <div id="controls">
+    Управление: стрелки ← → или клавиши A / D<br />
+    Лови кружки с элементами программы конференции, не дай им упасть 3 раза!
+  </div>
+
+  <script>
+    const canvas = document.getElementById("game");
+    const ctx = canvas.getContext("2d");
+
+    const scoreEl = document.getElementById("score");
+    const livesEl = document.getElementById("lives");
+    const restartBtn = document.getElementById("restart-btn");
+
+    const W = canvas.width;
+    const H = canvas.height;
+
+    const player = {
+      w: 70,
+      h: 16,
+      x: W / 2 - 35,
+      y: H - 40,
+      speed: 5,
+      vx: 0
+    };
+
+    const itemsConfig = [
+      { label: "Ташкент", emoji: "🕌" },
+      { label: "Перо", emoji: "✒️" },
+      { label: "Компьютер", emoji: "💻" },
+      { label: "Лекция 1", emoji: "📖" },
+      { label: "Практика", emoji: "📝" },
+      { label: "Экскурсия", emoji: "🚌" },
+      { label: "Знакомства", emoji: "🤝" }
+    ];
+
+    let items = [];
+    let lives = 3;
+    let score = 0;
+    let lastSpawn = 0;
+    let spawnInterval = 1200; // мс (можно уменьшать по ходу игры)
+    let gameOver = false;
+
+    const keys = {
+      left: false,
+      right: false
+    };
+
+    function resetGame() {
+      items = [];
+      lives = 3;
+      score = 0;
+      spawnInterval = 1200;
+      lastSpawn = 0;
+      gameOver = false;
+      player.x = W / 2 - player.w / 2;
+      updateHUD();
+      restartBtn.style.display = "none";
+      requestAnimationFrame(loop);
+    }
+
+    function updateHUD() {
+      scoreEl.textContent = "Очки: " + score;
+      const hearts = "❤️".repeat(lives) + "🤍".repeat(3 - lives);
+      livesEl.textContent = "Жизни: " + hearts;
+    }
+
+    function spawnItem(timestamp) {
+      const cfg = itemsConfig[Math.floor(Math.random() * itemsConfig.length)];
+      const radius = 22;
+      const x = radius + Math.random() * (W - radius * 2);
+      const speed = 1.8 + Math.random() * 1.7;
+
+      items.push({
+        x,
+        y: -radius,
+        r: radius,
+        vy: speed,
+        emoji: cfg.emoji,
+        label: cfg.label
+      });
+
+      lastSpawn = timestamp;
+    }
+
+    function updatePlayer() {
+      if (keys.left && !keys.right) {
+        player.vx = -player.speed;
+      } else if (keys.right && !keys.left) {
+        player.vx = player.speed;
+      } else {
+        player.vx = 0;
+      }
+      player.x += player.vx;
+
+      if (player.x < 10) player.x = 10;
+      if (player.x + player.w > W - 10) player.x = W - 10 - player.w;
+    }
+
+    function updateItems() {
+      for (let i = items.length - 1; i >= 0; i--) {
+        const it = items[i];
+        it.y += it.vy;
+
+        // столкновение с игроком (простое пересечение прямоугольников)
+        const withinX =
+          it.x + it.r > player.x && it.x - it.r < player.x + player.w;
+        const withinY =
+          it.y + it.r > player.y && it.y - it.r < player.y + player.h;
+
+        if (withinX && withinY) {
+          score += 1;
+          // усложняем постепенно
+          if (spawnInterval > 500) {
+            spawnInterval -= 15;
+          }
+          items.splice(i, 1);
+          updateHUD();
+          continue;
+        }
+
+        // упал ниже экрана — минус жизнь
+        if (it.y - it.r > H) {
+          items.splice(i, 1);
+          lives -= 1;
+          updateHUD();
+          if (lives <= 0) {
+            gameOver = true;
+          }
+        }
+      }
+    }
+
+    function drawBackground() {
+      // лёгкий «свет» в центре
+      const gradient = ctx.createRadialGradient(
+        W / 2, H / 3, 10,
+        W / 2, H / 3, H
+      );
+      gradient.addColorStop(0, "#1d2b55");
+      gradient.addColorStop(1, "#050918");
+      ctx.fillStyle = gradient;
+      ctx.fillRect(0, 0, W, H);
+    }
+
+    function drawPlayer() {
+      ctx.save();
+      ctx.fillStyle = "#f1e3b4";
+      ctx.shadowColor = "rgba(0,0,0,0.5)";
+      ctx.shadowBlur = 8;
+      ctx.beginPath();
+      const r = 8;
+      const x = player.x, y = player.y, w = player.w, h = player.h;
+      ctx.moveTo(x + r, y);
+      ctx.lineTo(x + w - r, y);
+      ctx.quadraticCurveTo(x + w, y, x + w, y + r);
+      ctx.lineTo(x + w, y + h - r);
+      ctx.quadraticCurveTo(x + w, y + h, x + w - r, y + h);
+      ctx.lineTo(x + r, y + h);
+      ctx.quadraticCurveTo(x, y + h, x, y + h - r);
+      ctx.lineTo(x, y + r);
+      ctx.quadraticCurveTo(x, y, x + r, y);
+      ctx.closePath();
+      ctx.fill();
+
+      // "человечек" — маленький круг сверху
+      ctx.beginPath();
+      ctx.arc(x + w / 2, y - 12, 10, 0, Math.PI * 2);
+      ctx.fill();
+      ctx.restore();
+    }
+
+    function drawItems() {
+      ctx.textAlign = "center";
+      ctx.textBaseline = "middle";
+      ctx.font = "16px system-ui";
+
+      for (const it of items) {
+        // кружок
+        ctx.save();
+        ctx.fillStyle = "#bca676";
+        ctx.strokeStyle = "#f6f0d5";
+        ctx.lineWidth = 2;
+        ctx.beginPath();
+        ctx.arc(it.x, it.y, it.r, 0, Math.PI * 2);
+        ctx.closePath();
+        ctx.fill();
+        ctx.stroke();
+
+        // эмодзи
+        ctx.fillStyle = "#0b1630";
+        ctx.font = "20px system-ui";
+        ctx.fillText(it.emoji, it.x, it.y - 4);
+
+        // подпись мелко
+        ctx.font = "10px system-ui";
+        ctx.fillText(it.label, it.x, it.y + 13);
+        ctx.restore();
+      }
+    }
+
+    function drawGameOver() {
+      ctx.save();
+      ctx.fillStyle = "rgba(0,0,0,0.55)";
+      ctx.fillRect(0, 0, W, H);
+
+      ctx.fillStyle = "#f1e3b4";
+      ctx.textAlign = "center";
+      ctx.textBaseline = "middle";
+
+      ctx.font = "28px system-ui";
+      ctx.fillText("Игра окончена", W / 2, H / 2 - 20);
+
+      ctx.font = "16px system-ui";
+      ctx.fillText("Ваш результат: " + score + " очков", W / 2, H / 2 + 10);
+      ctx.fillText("Элементы программы ещё будут ждать вас!", W / 2, H / 2 + 36);
+
+      ctx.restore();
+      restartBtn.style.display = "block";
+    }
+
+    function loop(timestamp) {
+      if (gameOver) {
+        drawBackground();
+        drawItems();
+        drawPlayer();
+        drawGameOver();
+        return;
+      }
+
+      // логика
+      if (timestamp - lastSpawn > spawnInterval) {
+        spawnItem(timestamp);
+      }
+      updatePlayer();
+      updateItems();
+
+      // отрисовка
+      drawBackground();
+      drawItems();
+      drawPlayer();
+
+      requestAnimationFrame(loop);
+    }
+
+    // Слушатели клавиш
+    window.addEventListener("keydown", (e) => {
+      if (e.key === "ArrowLeft" || e.key === "a" || e.key === "ф") {
+        keys.left = true;
+      }
+      if (e.key === "ArrowRight" || e.key === "d" || e.key === "в") {
+        keys.right = true;
+      }
+    });
+
+    window.addEventListener("keyup", (e) => {
+      if (e.key === "ArrowLeft" || e.key === "a" || e.key === "ф") {
+        keys.left = false;
+      }
+      if (e.key === "ArrowRight" || e.key === "d" || e.key === "в") {
+        keys.right = false;
+      }
+    });
+
+    restartBtn.addEventListener("click", () => {
+      resetGame();
+    });
+
+    // старт
+    updateHUD();
+    requestAnimationFrame(loop);
+  </script>
+</body>
+</html>
