@@ -125,7 +125,7 @@
     }
 
     #footer {
-      margin-top: 16px;              /* Больше воздуха под игрой */
+      margin-top: 16px;
       font-size: 13px;
       line-height: 1.3;
       opacity: 0.97;
@@ -168,7 +168,7 @@
       }
 
       #footer {
-        margin-top: 18px;   /* ещё чуть дальше от игры на телефоне */
+        margin-top: 18px;
         font-size: 13px;
       }
     }
@@ -213,9 +213,9 @@
     let W = canvas.width;
     let H = canvas.height;
 
-    // Масштаб игры под экран (чуть больше на телефоне)
+    // Масштаб игры под экран (чуть шире на телефоне)
     function resizeForMobile() {
-      const maxWidth = Math.min(window.innerWidth - 20, 640); // было -40, сделаем игру шире
+      const maxWidth = Math.min(window.innerWidth - 20, 640);
       const ratio = maxWidth / 640;
       canvas.style.width = maxWidth + "px";
       canvas.style.height = 420 * ratio + "px";
@@ -233,14 +233,22 @@
     };
 
     const itemsConfig = [
-      { label: "Ташкент", emoji: "🕌" },
+      { label: "Ташкент",   emoji: "🕌" },
       { label: "Журналист", emoji: "✒️" },
       { label: "Компьютер", emoji: "💻" },
-      { label: "Лекция", emoji: "📖" },
-      { label: "Практика", emoji: "📝" },
+      { label: "Лекция",    emoji: "📖" },
+      { label: "Практика",  emoji: "📝" },
       { label: "Экскурсия", emoji: "🚌" },
-      { label: "Знакомства", emoji: "🤝" }
+      { label: "Знакомства",emoji: "🤝" }
     ];
+
+    // Лого журфака как картинка
+    const journImg = new Image();
+    journImg.src = "journ.png";
+    let journReady = false;
+    journImg.onload = () => {
+      journReady = true;
+    };
 
     let items = [];
     let lives = 3;
@@ -253,6 +261,12 @@
       left: false,
       right: false
     };
+
+    // функция сложности: чем больше очков, тем быстрее падают объекты
+    function getDifficulty() {
+      // растёт от 1 до 3 при увеличении счёта
+      return 1 + Math.min(score / 20, 2);
+    }
 
     function resetGame() {
       items = [];
@@ -274,19 +288,44 @@
     }
 
     function spawnItem(timestamp) {
-      const cfg = itemsConfig[Math.floor(Math.random() * itemsConfig.length)];
-      const radius = 26;
-      const x = radius + Math.random() * (W - radius * 2);
-      const speed = 1.8 + Math.random() * 1.7;
+      const difficulty = getDifficulty();
 
-      items.push({
-        x,
-        y: -radius,
-        r: radius,
-        vy: speed,
-        emoji: cfg.emoji,
-        label: cfg.label
-      });
+      // Решаем, будет ли это особый кружок-журфак
+      let isSpecial = false;
+      if (journReady && difficulty > 1.4) { // после разгона сложности
+        // вероятностное появление особого предмета
+        if (Math.random() < 0.25) {
+          isSpecial = true;
+        }
+      }
+
+      const radius = isSpecial ? 30 : 26;
+      const x = radius + Math.random() * (W - radius * 2);
+
+      // базовая скорость + усиление от сложности
+      const baseSpeed = 1.6 + Math.random() * 1.3;
+      const speed = baseSpeed * difficulty;
+
+      if (isSpecial) {
+        items.push({
+          type: "journ",
+          x,
+          y: -radius,
+          r: radius,
+          vy: speed
+        });
+      } else {
+        const cfg = itemsConfig[Math.floor(Math.random() * itemsConfig.length)];
+        items.push({
+          type: "normal",
+          x,
+          y: -radius,
+          r: radius,
+          vy: speed,
+          emoji: cfg.emoji,
+          label: cfg.label
+        });
+      }
 
       lastSpawn = timestamp;
     }
@@ -316,10 +355,17 @@
           it.y + it.r > player.y && it.y - it.r < player.y + player.h;
 
         if (withinX && withinY) {
-          score += 1;
+          // бонус за особый кружок — больше очков
+          if (it.type === "journ") {
+            score += 3;
+          } else {
+            score += 1;
+          }
+
           if (spawnInterval > 500) {
             spawnInterval -= 15;
           }
+
           items.splice(i, 1);
           updateHUD();
           continue;
@@ -380,6 +426,8 @@
 
       for (const it of items) {
         ctx.save();
+
+        // общий кружок-фон
         ctx.fillStyle = "#bca676";
         ctx.strokeStyle = "#f6f0d5";
         ctx.lineWidth = 2;
@@ -389,13 +437,30 @@
         ctx.fill();
         ctx.stroke();
 
-        // значки — оставляем Oswald
-        ctx.fillStyle = "#0b1630";
-        ctx.font = "20px 'Oswald', system-ui, sans-serif";
-        ctx.fillText(it.emoji, it.x, it.y - 5);
+        if (it.type === "journ" && journReady) {
+          // особый кружок с логотипом журфака
+          const imgSize = it.r * 1.5; // чуть меньше кружка
+          ctx.save();
+          ctx.beginPath();
+          ctx.arc(it.x, it.y, it.r - 2, 0, Math.PI * 2);
+          ctx.clip();
+          ctx.drawImage(
+            journImg,
+            it.x - imgSize / 2,
+            it.y - imgSize / 2,
+            imgSize,
+            imgSize
+          );
+          ctx.restore();
+        } else if (it.type === "normal") {
+          // обычные элементы программы
+          ctx.fillStyle = "#0b1630";
+          ctx.font = "20px 'Oswald', system-ui, sans-serif";
+          ctx.fillText(it.emoji, it.x, it.y - 5);
 
-        ctx.font = "11px 'Oswald', system-ui, sans-serif";
-        ctx.fillText(it.label, it.x, it.y + 13);
+          ctx.font = "11px 'Oswald', system-ui, sans-serif";
+          ctx.fillText(it.label, it.x, it.y + 13);
+        }
 
         ctx.restore();
       }
